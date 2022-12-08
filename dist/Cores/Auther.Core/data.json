@@ -1,0 +1,114 @@
+{
+  "data": {
+    "magic": "APF_VER_1",
+    "data_slots": [
+      {
+        "name": "BIOS",
+        "id": "210",
+        "required": true,
+		"deferload": true,
+        "parameters": 9,
+		"size_maximum": 1048576,
+        "filename": "kickstart.rom",
+        "address": "0x00f00000"
+      },
+	  {
+        "name": "MPU Bios",
+        "id": "200",
+        "required": true,
+        "parameters": 2,
+        "filename": "mpu.bin",
+        "extensions": [
+		"bin"
+		],
+        "size_exact": 0,
+        "size_maximum": 65536,
+        "address": "0x80000000"
+      },	  
+	  {
+        "name": "harddrive - Fast 1",
+        "id": "310",
+        "required": false,
+		"deferload": true,
+        "parameters": 0,
+        "filename": "fasthd1.img"
+      },
+	  {
+        "name": "harddrive - Fast 2",
+        "id": "311",
+        "required": false,
+		"deferload": true,
+        "parameters": 0,
+        "filename": "fasthd2.img"
+      },	  
+	  {
+        "name": "harddrive - Slow 1",
+        "id": "312",
+        "required": false,
+		"deferload": true,
+        "parameters": 0,
+        "filename": "slowhd1.img"
+      },
+	  {
+        "name": "harddrive - Slow 2",
+        "id": "313",
+        "required": false,
+		"deferload": true,
+        "parameters": 0,
+        "filename": "slowhd2.img"
+      },
+	  {
+        "name": "Floppy drive 0",
+        "id": "320",
+        "required": false,
+		"deferload": true,
+        "parameters": 9,
+        "extensions": [
+		"adf"
+		],
+        "size_exact": 0,
+        "size_maximum": 1572864,
+        "address": "0x80000000"
+      },
+	  {
+        "name": "Floppy drive 1",
+        "id": "321",
+        "required": false,
+		"deferload": true,
+        "parameters": 9,
+        "extensions": [
+		"adf"
+		],
+        "size_exact": 0,
+        "size_maximum": 1572864,
+        "address": "0x80000000"
+      },
+	  {
+        "name": "Floppy drive 2",
+        "id": "322",
+        "required": false,
+		"deferload": true,
+        "parameters": 9,
+        "extensions": [
+		"adf"
+		],
+        "size_exact": 0,
+        "size_maximum": 1572864,
+        "address": "0x80000000"
+      },
+	  {
+        "name": "Floppy drive 3",
+        "id": "323",
+        "required": false,
+		"deferload": true,
+        "parameters": 9,
+        "extensions": [
+		"adf"
+		],
+        "size_exact": 0,
+        "size_maximum": 1572864,
+        "address": "0x80000000"
+      }
+    ]
+  }
+}
