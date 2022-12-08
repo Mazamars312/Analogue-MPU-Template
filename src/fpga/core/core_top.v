@@ -526,73 +526,25 @@ core_bridge_cmd icb (
     reg         reset_n_last;
     reg [3:0]   bootup_clearing;
     
+	 wire [15:0]	ldata, rdata;
 
-	 
-	 //// amiga clocks ////
-	wire       	clk7_en;
-	wire       	clk7n_en;
-	wire 			clk7n_en90;
-	wire       	c1;
-	wire       	c3;
-	wire       	cck;
-	wire [9:0] 	eclk;
-	 
+	wire 			clk_114;
 	wire 			clk_sys;
 	wire        cpu_rst;
-	 
-	wire  [2:0] chip_ipl;
-	wire        chip_dtack;
-	wire        chip_as;
-	wire        chip_uds;
-	wire        chip_lds;
-	wire        chip_rw;
-	wire [15:0] chip_dout;
-	wire [15:0] chip_din;
-	wire [23:1] chip_addr;
 	
-	wire  [1:0] cpucfg;
-	wire  [2:0] cachecfg;
-	wire  [6:0] memcfg;
-	wire        bootrom;   
-	wire [15:0] ram_data;      // sram data bus
-	wire [15:0] ramdata_in;    // sram data bus in
-	wire [47:0] chip48;        // big chip read
-	wire [22:1] ram_address;   // sram address bus
-	wire        _ram_bhe;      // sram upper byte select
-	wire        _ram_ble;      // sram lower byte select
-	wire        _ram_we;       // sram write enable
-	wire        _ram_oe;       // sram output enable
+	// video
 	
-	reg 			reset_d;
-	
-	
-	wire        ide_fast;
-	wire [15:0] ide_din;
-	wire [15:0] ide_dout;
-	wire  [4:0] ide_addr;
-	wire        ide_rd;
-	wire        ide_wr;
-	wire  [5:0] ide_req;
-	wire        ide_f_irq;
-	wire  [5:0] ide_c_req;
-	wire [15:0] ide_c_readdata;
-	wire        ide_ena;
+	wire			hblank_i;
+	wire 			vblank_i;
+	wire			hs;
+	wire 			vs;
+	wire [2:0]	res;
+	wire 			lace;
+	wire 			field1;
+	wire [7:0]	r;
+	wire [7:0]	g;
+	wire [7:0]	b;
 
-	wire [15:0] fastchip_dout;
-wire        fastchip_sel;
-wire        fastchip_lds;
-wire        fastchip_uds;
-wire        fastchip_rnw;
-wire        fastchip_selack;
-wire        fastchip_ready;
-wire        fastchip_lw;
-
-//wire        ide_fast;
-wire        ide_f_led;
-//wire        ide_f_irq;
-wire  [5:0] ide_f_req;
-wire [15:0] ide_f_readdata;
-wire [15:0] joystick_enable;
 	wire [15:0] JOY0  =  {cont1_key_s[14], cont1_key_s[9], cont1_key_s[8], cont1_key_s[7], cont1_key_s[6], 
 								 cont1_key_s[5],  cont1_key_s[4], cont1_key_s[0], cont1_key_s[1], cont1_key_s[2], cont1_key_s[3]};
 	// joystick 2 [fire4,fire3,fire2,fire,up,down,left,right] (default joystick port)
@@ -602,11 +554,6 @@ wire [15:0] joystick_enable;
 	wire [15:0] JOY3;// = {16{joystick_enable[3]}} & {cont1_key[7], cont1_key[6], cont1_key[4], cont1_key[5], cont1_key[0], cont1_key[1], cont1_key[2], cont1_key[3]};
 	wire [15:0] JOYA0;
 	wire [15:0] JOYA1;
-	wire   [7:0] kbd_mouse_data;
-	wire         kbd_mouse_level;
-	wire   [1:0] kbd_mouse_type;
-	wire  [2:0] mouse_buttons;
-	wire [63:0] RTC;
 
 	wire        io_strobe;
 	wire        io_wait;
@@ -614,22 +561,7 @@ wire [15:0] joystick_enable;
 	wire        io_uio;
 	wire [15:0] io_din, io_dout;
 	wire [15:0] fpga_dout;
-	wire        cpu_nrst_out;
-	wire [31:0] cpu_nmi_addr;
 	
-	wire 			clk_114;
-	
-	wire [28:1] ram_addr;
-	wire [15:0] ram_dout1;
-wire        ram_ready1;
-wire        ram_sel;
-wire        ram_lds;
-wire        ram_uds;
-wire [15:0] ram_din;
-wire [15:0] ram_dout  = ram_dout1;//zram_sel ? ram_dout2  : ram_dout1;
-wire        ram_ready = ram_ready1; //zram_sel ? ram_ready2 : ram_ready1;
-wire        zram_sel  = |ram_addr[28:26];
-wire        ramshared;
 	
 pll pll
 (
@@ -638,136 +570,15 @@ pll pll
 	.outclk_1(clk_sys),
 	.outclk_2(video_rgb_clock),
 	.outclk_3(video_rgb_clock_90),
-//	.outclk_4(clk_mpu),
 	.locked(pll_core_locked)
 );
 
-assign clk_mpu = clk_74a;
 
-amiga_clk amiga_clk
-(
-	.clk_28   ( clk_sys    ), // input  clock c1 ( 28.687500MHz)
-	.clk7_en  ( clk7_en    ), // output clock 7 enable (on 28MHz clock domain)
-//	.clk7n_vga_en90 ( video_rgb_clock_90   ), // 7MHz 90 Degree Video output clock enable (on 28MHz clock domain)
-//	.clk7n_vga_en ( video_rgb_clock   ), // 7MHz 0 Degree Video output clock enable (on 28MHz clock domain)
-	.clk7n_en ( clk7n_en   ), // 7MHz negedge output clock enable (on 28MHz clock domain)
-	.c1       ( c1         ), // clk28m clock domain signal synchronous with clk signal
-	.c3       ( c3         ), // clk28m clock domain signal synchronous with clk signal delayed by 90 degrees
-	.cck      ( cck        ), // colour clock output (3.54 MHz)
-	.eclk     ( eclk       ), // 0.709379 MHz clock enable output (clk domain pulse)
-	.reset_n  ( pll_core_locked    )
-);
-
-	reg [7:0] reset_s;
-	reg rs;
-
-    wire    [7:0]   mouse_buttons_s;
-//    wire    [7:0]   cont3_joy_s;
-//	 wire    [7:0]   mouse_buttons;
-synch_3 #(.WIDTH(8)) s25(mouse_buttons, mouse_buttons_s, clk_sys);
-
-
-
-
-always @(posedge clk_sys) begin
-
-	if(~pll_core_locked) begin
-		reset_s <= 'd1;
-	end
-	else begin
-		reset_s <= reset_s << 1;
-		rs <= reset_s[7];
-		reset_d <= rs;
-	end
-end
-
-
-
-sdram_ctrl ram1
-(
-	.sysclk       (clk_114         ),
-	.reset_n      (~reset_d        ),
-	.c_7m         (c1              ),
-
-	.cache_rst    (cpu_rst         ),
-	.cpu_cache_ctrl(cpu_cacr       ),
-
-	.sd_data      (dram_dq        ),
-	.sd_addr      (dram_a         ),
-	.sd_dqm       (dram_dqm),
-	.sd_ba        (dram_ba        ),
-	.sd_we        (dram_we_n       ),
-	.sd_ras       (dram_ras_n      ),
-	.sd_cas       (dram_cas_n      ),
-	.sd_cke       (dram_cke       ),
-	.sd_clk       (dram_clk       ),
-
-	.cpuWR        (ram_din         ),
-	.cpuAddr      ({zram_sel, ram_addr[24:1]}),
-	.cpuU         (ram_uds         ),
-	.cpuL         (ram_lds         ),
-	.cpustate     (cpu_state       ),
-	.cpuCS        (ram_cs), //~zram_sel&
-	.cpuRD        (ram_dout1       ),
-	.ramready     (ram_ready1      ),
-
-	.chipWR       (ram_data        ),
-	.chipAddr     (ram_address     ),
-	.chipU        (_ram_bhe        ),
-	.chipL        (_ram_ble        ),
-	.chipRW       (_ram_we         ),
-	.chipDMA      (_ram_oe         ),
-	.chipRD       (ramdata_in      ),
-	.chip48       (chip48          )
-);
-
-fastchip fastchip
-(
-	.clk          (clk_114           ),
-	.cyc          (cyc               ),
-	.clk_sys      (clk_sys           ),
-
-	.reset        (~cpu_rst | ~cpu_nrst_out ),
-	.sel          (fastchip_sel      ),
-	.sel_ack      (fastchip_selack   ),
-	.ready        (fastchip_ready    ),
-
-	.addr         ({chip_addr,1'b0}  ),
-	.din          (chip_din          ),
-	.dout         (fastchip_dout     ),
-	.lds          (~fastchip_lds     ),
-	.uds          (~fastchip_uds     ),
-	.rnw          (fastchip_rnw      ),
-	.longword     (fastchip_lw       ),
-
-	//RTG framebuffer control
-//	.rtg_ena      (FB_EN             ),
-//	.rtg_hsize    (FB_WIDTH          ),
-//	.rtg_vsize    (FB_HEIGHT         ),
-//	.rtg_format   (FB_FORMAT         ),
-//	.rtg_base     (FB_BASE           ),
-//	.rtg_stride   (FB_STRIDE         ),
-//	.rtg_pal_clk  (FB_PAL_CLK        ),
-//	.rtg_pal_dw   (FB_PAL_DOUT       ),
-//	.rtg_pal_dr   (FB_PAL_DIN        ),
-//	.rtg_pal_a    (FB_PAL_ADDR       ),
-//	.rtg_pal_wr   (FB_PAL_WR         ),
-
-	.ide_ena      (ide_ena & ide_fast),
-	.ide_irq      (ide_f_irq         ),
-	.ide_req      (ide_f_req         ),
-	.ide_address  (ide_addr          ),
-	.ide_write    (ide_wr            ),
-	.ide_writedata(ide_dout          ),
-	.ide_read     (ide_rd            ),
-	.ide_readdata (ide_f_readdata    ),
-	.ide_led      (ide_f_led         )
-);
 
 wire reset_mpu_l;
 substitute_mcu_apf_mister substitute_mcu_apf_mister(
 		// Controls for the MPU
-		.clk_mpu								( clk_mpu ), 							// Clock of the MPU itself
+		.clk_mpu								( clk_74a ), 							// Clock of the MPU itself
 		.clk_sys								( clk_sys ),
 		.clk_74a								( clk_74a ),							// Clock of the APF Bus
 		.reset_n								( reset_n ),							// Reset from the APF System
@@ -835,239 +646,16 @@ substitute_mcu_apf_mister substitute_mcu_apf_mister(
 	 
 	 );
 
-wire        vs;
-wire        hs;
-wire  [1:0] ar;
-wire [7:0] red, green, blue, r,g,b;
-wire lace, field1;
-wire hblank_i, vblank_i, vbl, fx;
-wire  [1:0] res;
-
-wire  [1:0] cpu_state;
-wire  [3:0] cpu_cacr;
-wire  [14:0] ldata, rdata;
-wire ide_c_led;
-minimig minimig
-(
-	.reset_n		  				(reset_n),
-	.clk_74a		  				(clk_74a			  ),
-	.reset_mpu_l				(reset_mpu_l),
-	//m68k pins
-	.cpu_address  				(chip_addr        ), // M68K address bus
-	.cpu_data     				(chip_dout        ), // M68K data bus
-	.cpudata_in   				(chip_din         ), // M68K data in
-	._cpu_ipl     				(chip_ipl         ), // M68K interrupt request
-	._cpu_as      				(chip_as          ), // M68K address strobe
-	._cpu_uds     				(chip_uds         ), // M68K upper data strobe
-	._cpu_lds     				(chip_lds         ), // M68K lower data strobe
-	.cpu_r_w      				(chip_rw          ), // M68K read / write
-	._cpu_dtack   				(chip_dtack       ), // M68K data acknowledge
-	._cpu_reset   				(cpu_rst          ), // M68K reset
-	._cpu_reset_in				(cpu_nrst_out     ), // M68K reset out
-	.nmi_addr     				(cpu_nmi_addr    ), // M68K NMI address
-
-	//sram pins
-	.ram_data     				(ram_data         ), // SRAM data bus
-	.ramdata_in   				(ramdata_in       ), // SRAM data bus in
-	.ram_address  				(ram_address      ), // SRAM address bus
-	._ram_bhe     				(_ram_bhe         ), // SRAM upper byte select
-	._ram_ble     				(_ram_ble         ), // SRAM lower byte select
-	._ram_we      				(_ram_we          ), // SRAM write enable
-	._ram_oe      				(_ram_oe          ), // SRAM output enable
-	.chip48       				(chip48           ), // big chipram read
-
-	//system  pins
-	.rst_ext      				(reset_d          ), // reset from ctrl block
-	.rst_out      				(                 ), // minimig reset status
-	.clk          				(clk_sys          ), // output clock c1 ( 28.687500MHz)
-	.clk7_en      				(clk7_en          ), // 7MHz clock enable
-	.clk7n_en     				(clk7n_en         ), // 7MHz negedge clock enable
-	.c1           				(c1               ), // clk28m clock domain signal synchronous with clk signal
-	.c3           				(c3               ), // clk28m clock domain signal synchronous with clk signal delayed by 90 degrees
-	.cck          				(cck              ), // colour clock output (3.54 MHz)
-	.eclk         				(eclk             ), // 0.709379 MHz clock enable output (clk domain pulse)
-
-	//I/O
-	._joy1        				(~JOY0            ), // joystick 1 [fire4,fire3,fire2,fire,up,down,left,right] (default mouse port)
-	._joy2        				(~JOY1            ), // joystick 2 [fire4,fire3,fire2,fire,up,down,left,right] (default joystick port)
-	._joy3        				(~JOY2            ), // joystick 1 [fire4,fire3,fire2,fire,up,down,left,right]
-	._joy4        				(~JOY3            ), // joystick 2 [fire4,fire3,fire2,fire,up,down,left,right]
-	.joya1        				(cont1_joy_s[15:0]  ),
-	.joya2        				(cont2_joy_s[15:0]  ),
-	.mouse_btn    				(mouse_buttons ), // mouse buttons
-	.kbd_mouse_data 			(kbd_mouse_data ), // mouse direction data, keycodes
-	.kbd_mouse_type 			(kbd_mouse_type ), // type of data
-	.kms_level    				(kbd_mouse_level  ),
-//	.pwr_led      				(pwr_led          ), // power led
-	.fdd_led      				(LED         ),
-	.hdd_led      				(ide_c_led        ),
-	.rtc          				(RTC              ),
-
-	//host controller interface (SPI)
-	.IO_UIO       				(io_uio           ),
-	.IO_FPGA      				(io_fpga          ),
-	.IO_STROBE    				(io_strobe        ),
-	.IO_WAIT      				(io_wait          ),
-	.IO_DIN       				(io_din           ),
-	.IO_DOUT      				(fpga_dout        ),
-	.bridge_addr            ( bridge_addr ),
-	.bridge_rd              ( bridge_rd ),
-	.bridge_rd_data         ( fpga_bridge_rd_data ),
-	.bridge_wr              ( bridge_wr ),
-	.bridge_wr_data         ( bridge_wr_data ),
-	//video
-	._hsync       				(hs               ), // horizontal sync
-	._vsync       				(vs               ), // vertical sync
-	.field1       				(field1           ),
-	.lace         				(lace             ),
-	.red          				(r                ), // red
-	.green        				(g                ), // green
-	.blue         				(b                ), // blue
-	.hblank       				(hblank_i           ),
-	.vblank       				(vblank_i            ),
-	.ar           				(ar               ),
-	.scanline     				(fx               ),
-	//.ce_pix     				(ce_pix           ),
-	.res          				(res              ),
-
-	//audio
-	.ldata        				(ldata            ), // left DAC data
-	.rdata        				(rdata            ), // right DAC data
-//	.ldata_okk    				(ldata_okk        ), // 9bit
-//	.rdata_okk    				(rdata_okk        ), // 9bit
-//
-//	.aud_mix      				(AUDIO_MIX        ),
-
-	//user i/o
-	.cpucfg       				(cpucfg           ), // CPU config
-	.cachecfg     				(cachecfg         ), // Cache config
-	.memcfg       				(memcfg           ), // memory config
-	.bootrom      				(bootrom          ), // bootrom mode. Needed here to tell tg68k to also mirror the 256k Kickstart 
-
-	.ide_fast     				(ide_fast         ),
-	.ide_ext_irq  				(ide_f_irq        		),
-	.ide_ena      				(ide_ena          ),
-	.ide_req      				(ide_c_req        ),
-	.ide_address  				(ide_addr         ),
-	.ide_write    				(ide_wr           ),
-	.ide_writedata				(ide_dout         ),
-	.ide_read     				(ide_rd           ),
-	.ide_readdata 				(ide_c_readdata   )
-);
-
-hps_ext hps_ext(
-.clk_sys				(clk_sys),
-.io_uio       		(io_uio),
-.io_fpga      		(io_fpga),
-.io_strobe    		(io_strobe),
-.io_din       		(io_din),
-.fpga_dout     	(fpga_dout),
-.io_dout      		(io_dout),
-
-.kbd_mouse_level	(kbd_mouse_level),
-.kbd_mouse_type	(kbd_mouse_type),
-.kbd_mouse_data	(kbd_mouse_data),
-.mouse_buttons    (mouse_buttons ), // mouse buttons
-.ide_dout			(ide_dout),
-.ide_addr			(ide_addr),
-.ide_rd				(ide_rd),
-.ide_wr				(ide_wr),
-.ide_req				(ide_fast ? ide_f_req : ide_c_req),  
-.ide_din				(ide_fast ? ide_f_readdata : ide_c_readdata)
-);
-
-wire cpu_type = cpucfg[1];
-reg  cpu_ph1;
-reg  cpu_ph2;
-reg  cyc;
-reg ram_cs;
-
-always @(posedge clk_114) begin
-	reg [3:0] div;
-	reg       c1d;
-
-	div <= div + 1'd1;
 	 
-	c1d <= c1;
-	if (~c1d & c1) div <= 3;
-	
-	if (~cpu_rst) begin
-		cyc <= 0;
-		cpu_ph1 <= 0;
-		cpu_ph2 <= 0;
-	end
-	else begin
-		cyc <= !div[1:0];
-		if (div[1] & ~div[0]) begin
-			cpu_ph1 <= 0;
-			cpu_ph2 <= 0;
-			case (div[3:2])
-				0: cpu_ph2 <= 1;
-				2: cpu_ph1 <= 1;
-			endcase
-		end
-	end
-
-	ram_cs <= ~(ram_ready & cyc & cpu_type) & ram_sel;
-end
-
-cpu_wrapper cpu_wrapper
-(
-	.reset        (cpu_rst         ),
-	.reset_out    (cpu_nrst_out    ),
-
-	.clk          (clk_sys         ),
-	.ph1          (cpu_ph1         ),
-	.ph2          (cpu_ph2         ),
-
-	.chip_addr    (chip_addr       ),
-	.chip_dout    (chip_dout       ),
-	.chip_din     (chip_din        ),
-	.chip_as      (chip_as         ),
-	.chip_uds     (chip_uds        ),
-	.chip_lds     (chip_lds        ),
-	.chip_rw      (chip_rw         ),
-	.chip_dtack   (chip_dtack      ),
-	.chip_ipl     (chip_ipl        ),
-
-	.fastchip_dout   (fastchip_dout   ),
-	.fastchip_sel    (fastchip_sel    ),
-	.fastchip_lds    (fastchip_lds    ),
-	.fastchip_uds    (fastchip_uds    ),
-	.fastchip_rnw    (fastchip_rnw    ),
-	.fastchip_selack (fastchip_selack ),
-	.fastchip_ready  (fastchip_ready  ),
-	.fastchip_lw     (fastchip_lw     ),
-
-	.cpucfg       (cpucfg          ),
-	.cachecfg     (cachecfg        ),
-	.fastramcfg   (memcfg[6:4]     ),
-	.bootrom      (bootrom         ),
-
-	.ramsel       (ram_sel         ),
-	.ramaddr      (ram_addr        ),
-	.ramlds       (ram_lds         ),
-	.ramuds       (ram_uds         ),
-	.ramdout      (ram_dout        ),
-	.ramdin       (ram_din         ),
-	.ramready     (ram_ready       ),
-	.ramshared    (ramshared       ),
-
-	//custom CPU signals
-	.cpustate     (cpu_state       ),
-	.cacr         (cpu_cacr        ),
-	.nmi_addr     (cpu_nmi_addr    )
-);
-
+	 
+	 
+	 
 /***************************************************************************
 
 
 	Video Core - THis does the decoding of the Vs and HS signals and the coding
 	for the interlacing.
 	
-	This keeps the core at a 640x480 interlaced image.
-
-
 *****************************************************************************/
 
 
@@ -1157,22 +745,21 @@ always @(posedge video_rgb_clock) begin
 	
 	
 	else if (~hblank_i && ~vblank_i) begin
-		if ((y_counter_vga <= 15 && y_counter_vga >= 5) && (x_counter_vga <= 15 && x_counter_vga >= 5) && LED) 
-			video_rgb 	<= {8'h0, 8'hF0, 8'h0};
-		else if ((y_counter_vga <= 15 && y_counter_vga >= 5) && (x_counter_vga <= 35 && x_counter_vga >= 20) && |{ide_c_led, ide_f_led}) 
-			video_rgb 	<= {8'hF0, 8'h0, 8'h0};
-		else video_rgb 	<= {r, g, b};
-		
+		video_rgb 	<= {r, g, b};
 		if (y_offset_vga == 0 && x_offset_vga == 0 ) video_de 	<= 'b1;
 		if (x_offset_vga != 0) x_offset_vga <= x_offset_vga - 1;
 	end
 	
 	else if (hblank_i && ~hblank_i_reg) begin
 		case (res_reg)
-			2'b11		: video_rgb 	<= {10'd0, 3'h3, 13'd0};
-			2'b10		: video_rgb 	<= {10'd0, 3'h2, 13'd0};
-			2'b01		: video_rgb 	<= {10'd0, 3'h1, 13'd0};
-			default : video_rgb 	<= 24'h0;
+			3'd7		: video_rgb 	<= {10'd0, 3'h7, 13'd0};
+			3'd6		: video_rgb 	<= {10'd0, 3'h6, 13'd0}; 
+			3'd5		: video_rgb 	<= {10'd0, 3'h5, 13'd0};
+			3'd4		: video_rgb 	<= {10'd0, 3'h4, 13'd0};
+			3'd3		: video_rgb 	<= {10'd0, 3'h3, 13'd0}; 
+			3'd2		: video_rgb 	<= {10'd0, 3'h2, 13'd0};
+			3'd1		: video_rgb 	<= {10'd0, 3'h1, 13'd0};
+			default  : video_rgb 	<= 24'h0;
 		endcase
 	end
 	
@@ -1180,8 +767,8 @@ end
 
 i2s i2s (
 .clk_74a			(clk_74a),
-.left_audio		({ldata, 1'b0}),
-.right_audio	({rdata, 1'b0}),
+.left_audio		(ldata),
+.right_audio	(rdata),
 
 .audio_mclk		(audio_mclk),
 .audio_dac		(audio_dac),
