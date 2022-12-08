@@ -26,7 +26,33 @@ Specs:
 * core.cpp/h this is where the main core could should be for polling data and reseting the core. 
 
 ### The core itself
+* The core will automativly start once and run the mpu.bin file when uploaded
 
+Addresses: 
+* MPU Address 0xFFFFFF00 - 0xFFFFFF1C / APF Address 0xFFFFFF00 - 0xFFFFFF1C - There are 8 Registors that the APF interact.json can use to commumicate with the MPU processor
+* MPU Address 0xFFFFFF20 - 0xFFFFFF4c - These are for the reading the joystick inputs from the APF Framework
+APF Target Dataslot commands
+* MPU Address 0xFFFFFF80 - target_dataslot_id 
+* MPU Address 0xFFFFFF84 - target_dataslot_bridgeaddr
+* MPU Address 0xFFFFFF88 - target_dataslot_length
+* MPU Address 0xFFFFFF8C - target_dataslot_slotoffset
+* MPU Address 0xFFFFFF90 - {target_dataslot_ack, target_dataslot_done, target_dataslot_err[2:0]}
+
+UART Timing
+* MPU Address 0xFFFFFF94 - uart_divisor = This is calculated in the UART.c program with the formula ((sys_clock * 1000)/uart_rate)
+* MPU Address 0xFFFFFF94 - sysclk_frequency = This is to advise the UART and timers what the CPU clock rate is in MHZ
+
+Timers
+* MPU Address 0xFFFFFFC4 - millisecond_counter_1 - This will show the interupt counter in Milliseconds
+* MPU Address 0xFFFFFFC8 - interupt_counter_1 - This will set the interrupt timer to interrupt the CPU when both the interrupt mask is on and the counter is greater or equal to this number
+* MPU Address 0xFFFFFFCC - millisecond_counter_2 - This will show the interupt counter in Milliseconds
+
+HPS Bus control
+* MPU Address 0xFFFFFFD0 - {io_ss2, io_ss1,io_ss0,io_clk,1'b0,IO_DOUT[15:0]}
+* MPU Address 0xFFFFFFD0 - {io_ack, IO_WIDE, IO_DIN}
+
+Interrupt Mask
+* MPU Address 0xFFFFFFF4 - {interupt_output_1, interupt_output_1_reg, timerenabled}
 
 ## Why do things take some time to load or save?
 
@@ -35,7 +61,7 @@ Specs:
 
 ## When will writes from the core to the APF bus 
 
-Right now the APF file system will re-write data to the file but will resize it to that last data packet you have sent. There is a request to Analogue for their next update so only the file data is updated and not the size of the file as well.
+Right now the APF file system will re-write data to the file but will resize it to that last data packet you have sent. A bug fix will be coming soon
 
 ## Credits
 
