@@ -7,7 +7,7 @@ Specs:
 * Connected to the core via a 16bit HPS Bus 
 * Two timers - one for interrupts and the other for user timing.
 * Currently, 32K of memory/ram for the MPU's program (Will be set to 16K for a smaller footprint)
-* A 2Kbyte swap buffer for both the APF and MPU to do transfers - can do up to 32K with changing the bram size. Anything larger would require some 
+* A 8Kbyte swap buffer for both the APF and MPU to do transfers - can do up to 32K with changing the bram size. Anything larger would require some 
 * The address of the swap memory starts at 0x0000_8000 on the MPU side and on the APF address it is at 0x8000_0000 (This can be changed on the .top_address parameter in the verilog code to any address you want on the APF bus)
 * Boot Vector is at 0x0000_0000 and the interrupt is at 0x0000_0020 - the startup.S already has the code there for initialation of the MPU with the interrupts turned on.
 
@@ -29,7 +29,8 @@ Specs:
 * The core will automativly start once and run the mpu.bin file when uploaded
 
 Addresses: 
-* MPU Address 0xFFFFFF00 - 0xFFFFFF1C / APF Address 0xFFFFFF00 - 0xFFFFFF1C - There are 8 Registors that the APF interact.json can use to commumicate with the MPU processor
+* MPU Address 0x00000000 - 0x00008000 / APF Address 0x80000000 - 0x80008000 - Program Ram - locked from the APF bus when running
+* MPU Address 0x00008000 - 0x80010000 / APF Address 0x80008000 - 0x80010000 - 8K Buffer mirrored
 * MPU Address 0xFFFFFF20 - 0xFFFFFF4c - These are for the reading the joystick inputs from the APF Framework
 APF Target Dataslot commands
 * MPU Address 0xFFFFFF80 - target_dataslot_id 
@@ -62,6 +63,10 @@ Interrupt Mask
 ## When will writes from the core to the APF bus 
 
 Right now the APF file system will re-write data to the file but will resize it to that last data packet you have sent. A bug fix will be coming soon
+
+## To Be Done:
+* Right now getting malloc and calls working so the swap memory can be cleared when needed
+* Write access when the next release canadate is out
 
 ## Credits
 
